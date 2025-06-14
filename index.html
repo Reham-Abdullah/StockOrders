@@ -52,6 +52,7 @@
     th {
       background-color: #caf0f8;
     }
+
     input[type="number"], input[type="text"] {
       width: 100px;
       padding: 5px;
@@ -59,9 +60,16 @@
       border: 1px solid #ccc;
       font-family: 'Segoe UI', Tahoma, sans-serif;
     }
+    /* توسيع عرض خانة اسم العنصر فقط */
+    table td:first-child input[type="text"] {
+      width: 200px; /* عرض أكبر */
+      white-space: normal; /* ما راح يؤثر كثير على input */
+    }
+
     input[type="number"] {
       direction: ltr;
     }
+
     button {
       background-color: #f9cb14;
       color: white;
