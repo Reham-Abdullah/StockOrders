@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Medical Stock System - Adel Care & Bluedeem</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      color: #333;
+      padding: 20px;
+      margin: 0;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      margin-top: 20px;
+    }
+    header img {
+      max-width: 120px;
+      height: auto;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 32px;
+      color: #085589;
+      text-align: center;
+      flex-grow: 1;
+    }
+    h2 {
+      background-color: #7ea1b3;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+      background-color: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #caf0f8;
+    }
+    input[type="number"], input[type="text"] {
+      width: 100px;
+      padding: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+    input[type="number"] {
+      direction: ltr;
+    }
+    button {
+      background-color: #f9cb14;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #0077b6;
+    }
+    .add-row {
+      margin-bottom: 15px;
+    }
+
+    /* منع اقتطاع الصفوف داخل PDF */
+    @media print {
+      tr, thead, tbody {
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
+  <!-- مكتبة html2pdf -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT1vMR5yZjv_nmEMxBVeVJ4qYRPP-jdbwUp6A&s" alt="Adel Care Logo" />
+    <h1>Medical Stock Manager</h1>
+    <img src="https://pbs.twimg.com/profile_images/1722583957370175488/LCWRjddn_400x400.jpg" alt="Bluedeem Logo" />
+  </header>
+
+  <h2>Obstetrics and Gynecology Items</h2>
+  <table id="obgyn-table">
+    <thead>
+      <tr>
+        <th>Items Name</th>
+        <th>North</th>
+        <th>Iskan</th>
+        <th>East</th>
+        <th>Bluedeem Zarqa</th>
+        <th>Bluedeem Ufoq</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button class="add-row" onclick="addRow('obgyn-table')">Add Item</button>
+  <button onclick="downloadPDF('obgyn-table', 'ObGyn_Items')">Save as PDF</button>
+
+  <h2>Dermatology Items</h2>
+  <table id="derma-table">
+    <thead>
+      <tr>
+        <th>Items Name</th>
+        <th>North</th>
+        <th>Iskan</th>
+        <th>East</th>
+        <th>Bluedeem Zarqa</th>
+        <th>Bluedeem Ufoq</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button class="add-row" onclick="addRow('derma-table')">Add Items</button>
+  <button onclick="downloadPDF('derma-table', 'Dermatology_Items')">Save as PDF</button>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.17.0/firebase-app.js';
+    import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/9.17.0/firebase-database.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA00Yy4qhhoqaHpKgLH94BdUWK9LF-QKeQ",
+      authDomain: "stockroom-d1f1f.firebaseapp.com",
+      databaseURL: "https://stockroom-d1f1f-default-rtdb.firebaseio.com",
+      projectId: "stockroom-d1f1f",
+      storageBucket: "stockroom-d1f1f.firebasestorage.app",
+      messagingSenderId: "166578761074",
+      appId: "1:166578761074:web:0d33f8dc8abd04df2f81eb",
+      measurementId: "G-RW1Y52V41D"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function saveDataToFirebase() {
+      const tables = ['obgyn-table', 'derma-table'];
+      tables.forEach(tableId => {
+        const tableBody = document.getElementById(tableId).querySelector('tbody');
+        const Items = {};
+        tableBody.querySelectorAll('tr').forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          const itemName = inputs[0].value.trim();
+          if (!itemName) return; // تجاهل الصفوف الفارغة
+
+          Items[itemName] = {
+            North: inputs[1].value || "0",
+            Iskan: inputs[2].value || "0",
+            East: inputs[3].value || "0",
+            BluedeemZarqa: inputs[4].value || "0",
+            BluedeemUfoq: inputs[5].value || "0"
+          };
+        });
+
+        set(ref(db, 'Items/' + tableId), Items).then(() => {
+          console.log(`Data saved for ${tableId}`);
+        }).catch(err => {
+          console.error(`Error saving data for ${tableId}:`, err);
+        });
+      });
+    }
+
+    function loadDataFromFirebase() {
+      get(ref(db, 'Items')).then(snapshot => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          console.log('Data loaded from Firebase:', data);
+          populateTables(data);
+        } else {
+          console.log('No data found in Firebase.');
+        }
+      }).catch(err => {
+        console.error('Error loading data from Firebase:', err);
+      });
+    }
+
+    function populateTables(data) {
+      ['obgyn-table', 'derma-table'].forEach(tableId => {
+        const tableBody = document.getElementById(tableId).querySelector('tbody');
+        tableBody.innerHTML = ''; // تفريغ المحتوى الحالي
+
+        if (!data || !data[tableId]) return; // إذا ما في بيانات لهذا الجدول
+
+        for (const name in data[tableId]) {
+          const item = data[tableId][name];
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="text" value="${name}"></td>
+            <td><input type="number" value="${item.North || 0}" style="direction:ltr"></td>
+            <td><input type="number" value="${item.Iskan || 0}" style="direction:ltr"></td>
+            <td><input type="number" value="${item.East || 0}" style="direction:ltr"></td>
+            <td><input type="number" value="${item.BluedeemZarqa || 0}" style="direction:ltr"></td>
+            <td><input type="number" value="${item.BluedeemUfoq || 0}" style="direction:ltr"></td>
+            <td><button onclick="deleteRow(this)">Delete</button></td>
+          `;
+          tableBody.appendChild(row);
+        }
+      });
+    }
+
+    window.addRow = function(tableId) {
+      const tableBody = document.getElementById(tableId).querySelector('tbody');
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="text" placeholder="Item name"></td>
+        <td><input type="number" min="0" value="0" style="direction:ltr"></td>
+        <td><input type="number" min="0" value="0" style="direction:ltr"></td>
+        <td><input type="number" min="0" value="0" style="direction:ltr"></td>
+        <td><input type="number" min="0" value="0" style="direction:ltr"></td>
+        <td><input type="number" min="0" value="0" style="direction:ltr"></td>
+        <td><button onclick="deleteRow(this)">Delete</button></td>
+      `;
+      tableBody.appendChild(row);
+      saveDataToFirebase();
+    };
+
+    window.deleteRow = function(button) {
+      const row = button.closest('tr');
+      row.remove();
+      saveDataToFirebase();
+    };
+
+    // تحويل صورة من URL إلى Base64
+    async function toDataURL(url) {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    window.downloadPDF = async function(tableId, fileName) {
+      const table = document.getElementById(tableId);
+
+      // إخفاء عمود Action مؤقتًا
+      const actionTh = table.querySelector('th:last-child');
+      const actionTds = table.querySelectorAll('td:last-child');
+      if (actionTh) actionTh.style.display = 'none';
+      actionTds.forEach(td => td.style.display = 'none');
+
+      // إنشاء حاوية مؤقتة لعرض المحتوى قبل طباعته
+      const container = document.createElement('div');
+      container.style.padding = '20px';
+      container.style.backgroundColor = 'white';
+      container.style.color = '#333';
+      container.style.width = '100%';
+      container.style.overflow = 'visible';
+      container.style.boxSizing = 'border-box';
+
+      // إنشاء رأس الصفحة مع الشعارات والعنوان
+      const header = document.createElement('div');
+      header.style.display = 'flex';
+      header.style.justifyContent = 'space-between';
+      header.style.alignItems = 'center';
+      header.style.marginBottom = '20px';
+
+      const logoBase64 = await toDataURL("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT1vMR5yZjv_nmEMxBVeVJ4qYRPP-jdbwUp6A&s");
+      const imgLeft = document.createElement('img');
+      imgLeft.src = logoBase64;
+      imgLeft.style.maxWidth = '120px';
+      imgLeft.style.height = 'auto';
+      header.appendChild(imgLeft);
+
+      const title = document.createElement('h1');
+      title.textContent = "Medical Stock Manager";
+      title.style.flexGrow = '1';
+      title.style.textAlign = 'center';
+      title.style.color = '#085589';
+      title.style.fontSize = '32px';
+      title.style.margin = '0';
+      header.appendChild(title);
+
+      const imgRight = document.createElement('img');
+      imgRight.src = "https://pbs.twimg.com/profile_images/1722583957370175488/LCWRjddn_400x400.jpg";
+      imgRight.style.maxWidth = '120px';
+      imgRight.style.height = 'auto';
+      header.appendChild(imgRight);
+
+      container.appendChild(header);
+
+      // العثور على عنوان h2 الأقرب للجدول وإضافته
+      let h2 = null;
+      let prev = table.previousElementSibling;
+      while (prev) {
+        if (prev.tagName.toLowerCase() === 'h2') {
+          h2 = prev.cloneNode(true);
+          break;
+        }
+        prev = prev.previousElementSibling;
+      }
+      if (h2) container.appendChild(h2);
+
+      // نسخ الجدول دون عمود Action
+      const cloneTable = table.cloneNode(true);
+      cloneTable.style.width = '100%';
+      const cloneActionTh = cloneTable.querySelector('th:last-child');
+      const cloneActionTds = cloneTable.querySelectorAll('td:last-child');
+      if (cloneActionTh) cloneActionTh.style.display = 'none';
+      cloneActionTds.forEach(td => td.style.display = 'none');
+
+      container.appendChild(cloneTable);
+      document.body.appendChild(container); // إضافته مؤقتًا لتظهر المحتويات للـ html2canvas
+
+      // انتظر لحظة للتأكد من تحميل العناصر
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // إعدادات PDF
+      const opt = {
+        margin: 0.3,
+        filename: `${fileName}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      };
+
+      // حفظ الـ PDF ثم إزالة الحاوية
+      html2pdf().set(opt).from(container).save().then(() => {
+        document.body.removeChild(container);
+      });
+
+      // إظهار عمود Action مرة أخرى
+      if (actionTh) actionTh.style.display = '';
+      actionTds.forEach(td => td.style.display = '');
+    };
+
+
+    // تحميل البيانات عند بدء الصفحة
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDataFromFirebase();
+    });
+
+  </script>
+
+</body>
+</html>
